@@ -29,7 +29,7 @@ st.title(f"🎬 {display_dt_str} 일별 박스오피스")
 # -----------------------------------------------------------------------------
 # Streamlit Cloud의 Secrets에 저장된 KOBIS_KEY를 가져옵니다.
 if "KOBIS_KEY" not in st.secrets:
-    st.error("🔑 API 키를 찾을 수 없습니다.")
+    st.error("🔑 API 키가 없노 이기야!!!!!! 우흥북딱한드르라흔드르라이기야")
     st.info(
         "Streamlit Cloud 설정(Secrets)에 `KOBIS_KEY = '발급받은키'`를 등록하였는지 확인해 주세요."
     )
