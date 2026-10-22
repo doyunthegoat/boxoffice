@@ -134,7 +134,9 @@ with col2:
 target_dt = selected_date.strftime("%Y%m%d")
 
 # ---------------------------------------------------------
-# API 호출 함수 (API 키 미설정 시 샘플 데이터 반환)
+# API 호출 함수 (들여쓰기 적용 완료)
 # ---------------------------------------------------------
 def fetch_boxoffice(dt):
-    # API 키가 설정되지 않았을 경우 테스트
+    # API 키가 설정되지 않았을 경우 테스트용 샘플 데이터 제공
+    if API_KEY == "YOUR_KOBIS_API_KEY" or not API_KEY.strip():
+        st.warning("⚠️ API 키가 설정되지 않아 테스트용 샘플 데이터를
