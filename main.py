@@ -21,7 +21,7 @@ selected_date = st.date_input(
 target_dt = selected_date.strftime("%Y%m%d")
 
 # ⚠️ 여기에 영화진흥위원회(KOBIS)에서 발급받은 실제 API 키를 입력하세요.
-API_KEY = "YOUR_KOBIS_API_KEY"
+API_KEY = "cd44c04dd87e16570306335bcf73c1da"
 
 
 def fetch_boxoffice(dt):
