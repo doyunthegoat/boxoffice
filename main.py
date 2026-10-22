@@ -2,139 +2,139 @@ import datetime
 import requests
 import streamlit as st
 
-# 페이지 설정을 화면 전체(wide) 및 다크 테마 느낌으로 구성
+# 페이지 기본 설정
 st.set_page_config(page_title="박스오피스 순위", layout="wide")
 
 # ---------------------------------------------------------
-# 🎨 사이버펑크 네온 스타일 커스텀 CSS 적용
+# 🎨 사이버펑크 네온 커스텀 CSS (안정화 버전)
 # ---------------------------------------------------------
-cyberpunk_css = """
+custom_css = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800;900&family=Noto+Sans+KR:wght@400;700&display=swap');
-
-/* 전체 배경 및 폰트 */
-.stApp {
-    background-color: #0d0a1a !important;
-    font-family: 'Noto Sans KR', sans-serif;
-    color: #e2e8f0;
-}
-
-/* 한국어 네온 메인 타이틀 */
+/* 메인 타이틀 네온 효과 */
 .cyber-title {
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 2.6rem;
-    font-weight: 900;
+    font-size: 2.5rem;
+    font-weight: 800;
     text-align: center;
-    color: #fff;
-    text-shadow: 
-        0 0 5px #fff,
-        0 0 10px #ffee00,
-        0 0 20px #ffee00,
-        0 0 40px #ff007f,
-        0 0 80px #ff007f;
-    margin-bottom: 2rem;
-    letter-spacing: 1px;
+    color: #ffffff;
+    text-shadow: 0 0 10px #ffee00, 0 0 20px #ffee00, 0 0 30px #ff007f;
+    margin-bottom: 25px;
 }
 
-/* 네온 카드 컨테이너 */
-.neon-card {
-    background: rgba(18, 11, 38, 0.85);
+/* 영화 카드 컨테이너 */
+.movie-card {
+    background-color: #1a162b;
     border: 1px solid #00f3ff;
-    border-radius: 12px;
-    padding: 16px 20px;
+    border-radius: 10px;
+    padding: 15px 20px;
     margin-bottom: 12px;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 10px rgba(0, 243, 255, 0.1);
-    transition: all 0.25s ease-in-out;
-    position: relative;
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
 }
 
-.neon-card:hover {
-    transform: translateY(-2px) scale(1.003);
+.movie-card:hover {
     border-color: #ff007f;
-    box-shadow: 0 0 25px rgba(255, 0, 127, 0.6), inset 0 0 15px rgba(255, 0, 127, 0.2);
+    box-shadow: 0 0 15px rgba(255, 0, 127, 0.5);
 }
 
-/* 툴팁 및 영화 포스터 호버 스타일 */
-.movie-title-wrap {
+/* 영화 제목 및 툴팁(포스터) 호버 효과 */
+.title-container {
     position: relative;
     display: inline-block;
     cursor: pointer;
-    font-weight: 700;
-    font-size: 1.15rem;
+    font-weight: bold;
+    font-size: 1.2rem;
     color: #00f3ff;
-    text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
 }
 
-.movie-title-wrap:hover {
+.title-container:hover {
     color: #ffee00;
-    text-shadow: 0 0 12px rgba(255, 238, 0, 0.9);
 }
 
-.movie-title-wrap .poster-tooltip {
+.title-container .poster-hover {
     visibility: hidden;
-    width: 180px;
-    background-color: #120b26;
+    width: 160px;
+    background-color: #0f0c1b;
     border: 2px solid #ff007f;
     border-radius: 8px;
-    padding: 6px;
+    padding: 5px;
     position: absolute;
-    z-index: 999;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    box-shadow: 0 0 20px rgba(255, 0, 127, 0.8);
+    z-index: 99;
+    bottom: 120%;
+    left: 0;
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    transition: opacity 0.3s;
+    box-shadow: 0 0 15px rgba(255, 0, 127, 0.8);
 }
 
-.movie-title-wrap:hover .poster-tooltip {
+.title-container:hover .poster-hover {
     visibility: visible;
     opacity: 1;
 }
 
-.poster-tooltip img {
+.poster-hover img {
     width: 100%;
     border-radius: 4px;
-    display: block;
 }
 
-/* 네온 배지 및 텍스트 스타일 */
-.rank-badge {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #ffee00;
-    text-shadow: 0 0 10px #ffee00;
-    min-width: 50px;
-}
-
-.rank-up {
-    color: #ff3366;
-    font-weight: bold;
-    text-shadow: 0 0 8px #ff3366;
-}
-
-.rank-down {
-    color: #00f3ff;
-    font-weight: bold;
-    text-shadow: 0 0 8px #00f3ff;
-}
-
-.rank-same {
-    color: #888;
-}
-
-/* 날짜 선택 인풋 네온 스타일 */
-div[data-baseweb="input"] {
-    border-radius: 8px !important;
-    border: 1px solid #bd00ff !important;
-    box-shadow: 0 0 10px rgba(189, 0, 255, 0.3) !important;
-}
+/* 순위 증감 색상 */
+.rank-up { color: #ff3366; font-weight: bold; }
+.rank-down { color: #00f3ff; font-weight: bold; }
+.rank-same { color: #888888; }
 </style>
 """
-st.markdown(cyberpunk_css, unsafe_allow_html=True)
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
+# 타이틀 & 날짜 선택
+# ---------------------------------------------------------
+st.markdown('<div class="cyber-title">⚡ 박스오피스 순위 ⚡</div>', unsafe_allow_html=True)
+
+today = datetime.date.today()
+yesterday = today - datetime.timedelta(days=1)
+
+# ⚠️ 여기에 영화진흥위원회(KOBIS) API 키를 넣어주세요.
+API_KEY = "YOUR_KOBIS_API_KEY"
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    selected_date = st.date_input(
+        "🗓️ 조회 날짜 선택 (최대 어제까지)",
+        value=yesterday,
+        max_value=yesterday,
+    )
+
+target_dt = selected_date.strftime("%Y%m%d")
+
+# ---------------------------------------------------------
+# API 호출 함수
+# ---------------------------------------------------------
+def fetch_boxoffice(dt):
+    url = "http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
+    params = {"key": API_KEY, "targetDt": dt}
+
+    if API_KEY == "YOUR_KOBIS_API_KEY" or not API_KEY.strip():
+        st.warning("⚠️ API 키가 설정되지 않았습니다. 코드 내부의 API_KEY 변수에 실제 API 키를 입력해 주세요.")
+        return []
+
+    try:
+        res = requests.get(url, params=params, timeout=5)
+        res_json = res.json()
+
+        if "faultInfo" in res_json:
+            fault = res_json["faultInfo"]
+            st.error(f"❌ API 오류: [{fault.get('errorCode')}] {fault.get('message')}")
+            return []
+
+        return res_json.get("boxOfficeResult", {}).get("dailyBoxOfficeList", [])
+    except Exception as e:
+        st.error(f"❌ 네트워크/데이터 오류 발생: {e}")
+        return []
+
+movies = fetch_boxoffice(target_dt)
+
+# ---------------------------------------------------------
+# 박스오피스 목록 렌더링
+# ---------------------------------------------------------
+if
