@@ -95,7 +95,7 @@ today = datetime.date.today()
 yesterday = today - datetime.timedelta(days=1)
 
 # ⚠️ 여기에 영화진흥위원회(KOBIS) API 키를 넣어주세요.
-API_KEY = "YOUR_KOBIS_API_KEY"
+API_KEY = "cd44c04dd87e16570306335bcf73c1da"
 
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
