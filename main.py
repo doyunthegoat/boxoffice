@@ -20,17 +20,38 @@ selected_date = st.date_input(
 # YYYYMMDD 포맷 변환
 target_dt = selected_date.strftime("%Y%m%d")
 
-API_KEY = "cd44c04dd87e16570306335bcf73c1da"  # 본인의 Kobis API 키 입력
+# ⚠️ 여기에 영화진흥위원회(KOBIS)에서 발급받은 실제 API 키를 입력하세요.
+API_KEY = "cd44c04dd87e16570306335bcf73c1da"
 
 
 def fetch_boxoffice(dt):
     url = "http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
     params = {"key": API_KEY, "targetDt": dt}
+
+    if API_KEY == "YOUR_KOBIS_API_KEY" or not API_KEY.strip():
+        st.warning("⚠️ API 키가 설정되지 않았습니다. 코드 내부의 API_KEY 변수에 실제 발급받은 키를 넣어주세요.")
+        return []
+
     try:
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, params=params, timeout=5)
         res_json = res.json()
-        return res_json.get("boxOfficeResult", {}).get("dailyBoxOfficeList", [])
+
+        # KOBIS API 실패/에러 응답 처리
+        if "faultInfo" in res_json:
+            fault = res_json["faultInfo"]
+            st.error(f"❌ API 오류 발생: [{fault.get('errorCode')}] {fault.get('message')}")
+            return []
+
+        box_office_result = res_json.get("boxOfficeResult", {})
+        daily_list = box_office_result.get("dailyBoxOfficeList", [])
+
+        return daily_list
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ 네트워크 요청 중 오류 발생: {e}")
+        return []
     except Exception as e:
+        st.error(f"❌ 데이터 처리 중 오류 발생: {e}")
         return []
 
 
@@ -46,7 +67,7 @@ else:
         rank = m.get("rank")
         rank_inten = int(m.get("rankInten", 0))
 
-        # 순위 증감 표시
+        # 순위 증감 표시 (양수: 🔺, 음수: 🔹, 0: -)
         if rank_inten > 0:
             inten_str = f"🔺 {rank_inten}"
         elif rank_inten < 0:
@@ -55,7 +76,7 @@ else:
             inten_str = "-"
 
         # 누적관객수 100만 명 이상 트로피 추가
-        movie_nm = m.get("movieNm")
+        movie_nm = m.get("movieNm", "")
         audi_acc = int(m.get("audiAcc", 0))
         if audi_acc >= 1000000:
             movie_nm += " 🏆"
