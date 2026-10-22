@@ -20,7 +20,7 @@ selected_date = st.date_input(
 # YYYYMMDD 포맷 변환
 target_dt = selected_date.strftime("%Y%m%d")
 
-API_KEY = "YOUR_KOBIS_API_KEY"  # 본인의 Kobis API 키 입력
+API_KEY = "cd44c04dd87e16570306335bcf73c1da"  # 본인의 Kobis API 키 입력
 
 
 def fetch_boxoffice(dt):
