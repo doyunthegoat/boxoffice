@@ -1,160 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import datetime
+import requests
+import streamlit as st
 
-// 날짜를 YYYYMMDD 형식의 문자열로 변환하는 함수
-const formatDate = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}${mm}${dd}`;
-};
+st.set_page_config(page_title="일별 박스오피스 조회", layout="wide")
 
-// 날짜를 YYYY-MM-DD 형식의 문자열로 변환하는 함수 (input type="date"용)
-const formatDateForInput = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-};
+# 오늘 날짜 및 어제 날짜 계산
+today = datetime.date.today()
+yesterday = today - datetime.timedelta(days=1)
 
-const App = () => {
-  // 오늘 날짜 및 어제 날짜 계산
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
+st.title("🎬 일별 박스오피스 조회")
 
-  // 기본 선택 날짜를 어제로 설정
-  const [selectedDate, setSelectedDate] = useState(formatDateForInput(yesterday));
-  const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(false);
+# 1. 달력에서 날짜 선택 (최대 어제까지)
+selected_date = st.date_input(
+    "날짜 선택",
+    value=yesterday,
+    max_value=yesterday,
+)
 
-  const API_KEY = 'YOUR_KOBIS_API_KEY'; // 본인의 Kobis API 키를 입력하세요.
+# YYYYMMDD 포맷 변환
+target_dt = selected_date.strftime("%Y%m%d")
 
-  const fetchBoxOffice = async (dateStr) => {
-    // YYYY-MM-DD -> YYYYMMDD 변환
-    const targetDate = dateStr.replace(/-/g, '');
-    setLoading(true);
-    setIsEmpty(false);
+API_KEY = "YOUR_KOBIS_API_KEY"  # 본인의 Kobis API 키 입력
 
-    try {
-      const response = await axios.get(
-        `http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json`,
-        {
-          params: {
-            key: API_KEY,
-            targetDt: targetDate,
-          },
-        }
-      );
 
-      const dailyBoxOfficeList =
-        response.data.boxOfficeResult?.dailyBoxOfficeList || [];
+def fetch_boxoffice(dt):
+    url = "http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
+    params = {"key": API_KEY, "targetDt": dt}
+    try:
+        res = requests.get(url, timeout=5)
+        res_json = res.json()
+        return res_json.get("boxOfficeResult", {}).get("dailyBoxOfficeList", [])
+    except Exception as e:
+        return []
 
-      if (dailyBoxOfficeList.length === 0) {
-        setIsEmpty(true);
-        setMovies([]);
-      } else {
-        setMovies(dailyBoxOfficeList);
-      }
-    } catch (error) {
-      console.error('박스오피스 데이터를 불러오는 중 오류 발생:', error);
-      setIsEmpty(true);
-      setMovies([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchBoxOffice(selectedDate);
-  }, [selectedDate]);
+movies = fetch_boxoffice(target_dt)
 
-  const handleDateChange = (e) => {
-    setSelectedDate(e.target.value);
-  };
+# 2. 결과가 비어있는 경우
+if not movies:
+    st.info("그날은 아직 집계 전입니다.")
+else:
+    # 데이터 가공
+    table_data = []
+    for m in movies:
+        rank = m.get("rank")
+        rank_inten = int(m.get("rankInten", 0))
 
-  // 순위 증감 표시 함수
-  const renderRankInten = (rankInten) => {
-    const inten = Number(rankInten);
-    if (inten > 0) {
-      return <span style={{ color: 'red' }}>▲ {inten}</span>;
-    } else if (inten < 0) {
-      return <span style={{ color: 'blue' }}>▼ {Math.abs(inten)}</span>;
-    }
-    return <span>-</span>;
-  };
+        # 순위 증감 표시
+        if rank_inten > 0:
+            inten_str = f"🔺 {rank_inten}"
+        elif rank_inten < 0:
+            inten_str = f"🔹 {abs(rank_inten)}"
+        else:
+            inten_str = "-"
 
-  return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>일별 박스오피스 조회</h1>
+        # 누적관객수 100만 명 이상 트로피 추가
+        movie_nm = m.get("movieNm")
+        audi_acc = int(m.get("audiAcc", 0))
+        if audi_acc >= 1000000:
+            movie_nm += " 🏆"
 
-      {/* 날짜 선택 달력 */}
-      <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="date-picker" style={{ marginRight: '10px' }}>
-          날짜 선택:
-        </label>
-        <input
-          id="date-picker"
-          type="date"
-          value={selectedDate}
-          max={formatDateForInput(yesterday)} // 가장 늦은 날짜는 어제까지로 제한
-          onChange={handleDateChange}
-        />
-      </div>
+        table_data.append(
+            {
+                "순위": rank,
+                "순위 증감": inten_str,
+                "영화명": movie_nm,
+                "개봉일": m.get("openDt"),
+                "당일 관객수": f"{int(m.get('audiCnt', 0)):,}명",
+                "누적 관객수": f"{audi_acc:,}명",
+            }
+        )
 
-      {/* 로딩 표시 */}
-      {loading && <p>데이터를 불러오는 중입니다...</p>}
-
-      {/* 데이터가 비어있을 때 */}
-      {!loading && isEmpty && (
-        <p style={{ color: '#666', fontWeight: 'bold' }}>
-          그날은 아직 집계 전입니다.
-        </p>
-      )}
-
-      {/* 박스오피스 목록 표 */}
-      {!loading && !isEmpty && movies.length > 0 && (
-        <table
-          border="1"
-          cellPadding="8"
-          cellSpacing="0"
-          style={{ width: '100%', borderCollapse: 'collapse' }}
-        >
-          <thead>
-            <tr style={{ backgroundColor: '#f2f2f2' }}>
-              <th>순위</th>
-              <th>순위 증감</th>
-              <th>영화명</th>
-              <th>개봉일</th>
-              <th>당일 관객수</th>
-              <th>누적 관객수</th>
-            </tr>
-          </thead>
-          <tbody>
-            {movies.map((movie) => {
-              const audiAcc = Number(movie.audiAcc);
-              const isOverOneMillion = audiAcc >= 1000000;
-
-              return (
-                <tr key={movie.movieCd} style={{ textAlign: 'center' }}>
-                  <td>{movie.rank}</td>
-                  <td>{renderRankInten(movie.rankInten)}</td>
-                  <td style={{ textAlign: 'left' }}>
-                    {movie.movieNm}
-                    {isOverOneMillion && ' 🏆'}
-                  </td>
-                  <td>{movie.openDt}</td>
-                  <td>{Number(movie.audiCnt).toLocaleString()}명</td>
-                  <td>{audiAcc.toLocaleString()}명</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-};
-
-export default App;
+    st.table(table_data)
